@@ -1,19 +1,28 @@
 import User from "../models/user.model";
+import bcrypt from 'bcryptjs';
 
 export const login = async (req, res) => {
     try {
         const {fullName, username, pwd, cfmPwd} = req.body;
 
+        // check if passwords match
         if (pwd !== cfmPwd) {
             return res.status(400).json({error: "passwords don't match"});
         }
 
+        // finding user
         const user = await User.findOne({username});
 
         if (user) {
             return res.status(400).json({error: "Username already exists"})
         }
 
+        // Hashing password
+        const salt = await bcrypt.genSalt(10);
+        const hashedPwd = await bcrypt.hash(pwd, salt);
+
+
+        // pfp creation and handling
         pfp = `https://avatar.iran.liara.run/username?username=${username}`;
 
         const newUser = new User({
@@ -23,14 +32,20 @@ export const login = async (req, res) => {
             profilePic: pfp,
         });
 
-        await newUser.save();
+        if (newUser) {
+            await newUser.save();
 
-        res.status(201).json({
-            _id: newUser._id,
-            fullName: newUser.fullName,
-            username: newUser.username,
-            profilePic: newUser.pfp,
-        });
+            res.status(201).json({
+                _id: newUser._id,
+                fullName: newUser.fullName,
+                username: newUser.username,
+                profilePic: newUser.pfp,
+            });
+        } else {
+            res.status(400).json({
+                error: "Invalid user data"
+            });
+        }
 
     } catch (error) {
         console.log("Error in signup controller", error.message);

@@ -13,8 +13,30 @@ export const login = async (req, res) => {
         if (user) {
             return res.status(400).json({error: "Username already exists"})
         }
-    } catch (error) {
 
+        pfp = `https://avatar.iran.liara.run/username?username=${username}`;
+
+        const newUser = new User({
+            fullName,
+            username,
+            pwd,
+            profilePic: pfp,
+        });
+
+        await newUser.save();
+
+        res.status(201).json({
+            _id: newUser._id,
+            fullName: newUser.fullName,
+            username: newUser.username,
+            profilePic: newUser.pfp,
+        });
+
+    } catch (error) {
+        console.log("Error in signup controller", error.message);
+        res.status(500).json({
+            error: "Internal server error."
+        })
     }
 }
 

@@ -1,7 +1,8 @@
 import User from "../models/user.model";
 import bcrypt from 'bcryptjs';
+import generateTokenAndSetCookie from "../utils/generateToken.js";
 
-export const login = async (req, res) => {
+export const signup = async (req, res) => {
     try {
         const {fullName, username, pwd, cfmPwd} = req.body;
 
@@ -33,6 +34,8 @@ export const login = async (req, res) => {
         });
 
         if (newUser) {
+            // generate JWT token
+            generateTokenAndSetCookie(newUser._id, res);
             await newUser.save();
 
             res.status(201).json({
@@ -55,10 +58,43 @@ export const login = async (req, res) => {
     }
 }
 
-export const logout = (req, res) => {
-    console.log("logoutUser");
+export const login = async (req, res) => {
+    try {
+        const { username, pwd} = req.body;
+        const user = await User.findOne({username});
+        const isPwdCorrect = await bcrypt.compare(pwd, user?.pwd || "");
+
+        if (!user || !isPwdCorrect) {
+            return res.status(400).json({error: "Invalid username or password."});
+        }
+
+        generateTokenAndSetCookie(user._id, res);
+
+        res.status(200).json({
+            _id: user._id,
+            fullName: user.fullName,
+            username: user.username,
+            profilePic: user.profilePic,
+        });
+         
+    } catch(error) {
+        console.log("Error in login controller", error.message);
+        res.status(500).json({ 
+            error: "internal server error" 
+        });
+    }
 }
 
-export const signup = (req, res) => {
-    console.log("signupUser");
+export const signout = async (req, res) => {
+    try {
+        res.cookie("jwt", "", {maxAge: 0});
+        res.status(200).json({
+            message: "Logged out successfully"
+        });
+    } catch(error) {
+        console.log("Error in logout controller", error.message);
+        res.status(500).json({
+            error: "internal server error"
+        });
+    }
 }
